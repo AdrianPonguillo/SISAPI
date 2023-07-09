@@ -70,7 +70,7 @@ partitions = {}
 
 repos = Repository()
 #repos.regenerate_index(partitions)
-#partitions = repos.get_index()
+partitions = repos.get_index()
 #print(partitions)
 
 
@@ -87,7 +87,7 @@ Repository().save_index(partitions)
 #clave9878
 #clave9193
 
-print(repos.read_data('clave8738', partitions))
+print(repos.read_data('clave838', partitions))
 print(repos.read_data('clave190', partitions))
 print(repos.read_data('clave115', partitions))
 #print(partitions)
