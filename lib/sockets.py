@@ -42,18 +42,24 @@ class SocketClient:
         self.client_port = client_port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.bind(('', self.client_port))
-        self.sock.connect((self.server_ip, self.server_port))
+        #self.sock.connect((self.server_ip, self.server_port))
 
     def send_message(self, message):
-        try:
-            tiempo_inicio = time.time()
-            self.sock.sendall(message.encode('utf-8'))
-            data = self.sock.recv(1024)
-            tiempo_fin = time.time()
-            if data.decode('utf-8') == 'Estoy vivo':
-                return tiempo_fin - tiempo_inicio
-        except Exception as e:
-            print(f"No se pudo enviar el mensaje al servidor en {self.server_ip}:{self.server_port}, error: {e}")
+        for _ in range(50):  # Intentar reconectar 5 veces
+            try:
+                self.sock.connect((self.server_ip, self.server_port))
+                tiempo_inicio = time.time()
+                self.sock.sendall(message.encode('utf-8'))
+                data = self.sock.recv(1024)
+                tiempo_fin = time.time()
+                if data.decode('utf-8') == 'Estoy vivo':
+                    return tiempo_fin - tiempo_inicio
+            except ConnectionRefusedError:
+                print(f"No se pudo conectar al servidor en {self.server_ip}:{self.server_port}. Intentando de nuevo en 5 segundos...")
+                time.sleep(5)  # Esperar 5 segundos antes de intentar de nuevo
+            except Exception as e:
+                print(f"Ocurrió un error: {e}")
+                break
             
     def close_connection(self):
         self.sock.close()
