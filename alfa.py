@@ -80,7 +80,7 @@ client = None
 if ip_address == '172.27.182.65':
     server = WebSocketServer('172.27.182.65', 8000, 9000)
 elif ip_address == '172.27.188.147':
-    client = WebSocketClient('172.27.188.147', 8000, 9000)
+    client = WebSocketClient('172.27.182.65', 9000, 8000)
 
 # Iniciar el servidor y el cliente WebSocket
 async def main():
