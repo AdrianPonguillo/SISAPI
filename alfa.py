@@ -57,10 +57,10 @@ class Node:
         await asyncio.gather(*self.servers.values())
 
 nodes = [
-    Node('dist4', '172.27.182.65', 888, 999),
-    Node('dist5', '172.27.188.147', 888, 999),
-    Node('dist6', '172.27.186.190', 888, 999),
-    Node('dist7', '172.27.188.30', 888, 999)
+    Node('dist4', '172.27.182.65', 8000, 9000),
+    Node('dist5', '172.27.188.147', 8000, 9000),
+    Node('dist6', '172.27.186.190', 8000, 9000),
+    Node('dist7', '172.27.188.30', 8000, 9000)
 ]
 
 async def main():
