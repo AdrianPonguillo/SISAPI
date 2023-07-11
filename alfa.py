@@ -69,11 +69,11 @@ ip_address = socket.gethostbyname(hostname)
 # Crear el servidor y el cliente WebSocket
 server = None
 client = None
-for node in nodes:
-    if ip_address == node['ip']:
-        server = WebSocketServer(node['ip'], node['port-in'], node['port-out'])
-    elif node['ip'] == '172.27.188.147':
-        client = WebSocketClient(node['ip'], node['port-in'], node['port-out'])
+
+if ip_address == '172.27.182.65':
+    server = WebSocketServer('172.27.182.65', 8000, 9000)
+elif ip_address == '172.27.188.147':
+    client = WebSocketClient('172.27.182.65', 8000, 9000)
 
 # Iniciar el servidor y el cliente WebSocket
 async def main():
