@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import websockets
+import socket
 
 class WebSocketServer:
     def __init__(self, ip, port_in, port_out):
@@ -61,12 +62,18 @@ nodes = [
     {'name': 'dist7', 'ip':'172.27.188.30',  'port-in': 8000, 'port-out': 9000},
 ]
 
-# Crear el servidor y el cliente WebSocket
-for node in nodes:
-    if node['ip'] == '172.27.182.65':
-        server = WebSocketServer(node['ip'], node['port-in'], node['port-out'])
-    elif node['ip'] == '172.27.188.147':
-        client = WebSocketClient(node['ip'], node['port-in'], node['port-out'])
+def get_infonet():
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
+    return hostname, ip_address
+
+hostname , ip_address = get_infonet()
+
+
+if ip_address == '172.27.182.65':
+    server = WebSocketServer(ip_address, 8000, 9000)
+elif ip_address == '172.27.188.147':
+    client = WebSocketClient(ip_address, 8000, 9000)
 
 # Iniciar el servidor y el cliente WebSocket
 async def main():
