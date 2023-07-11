@@ -62,18 +62,18 @@ nodes = [
     {'name': 'dist7', 'ip':'172.27.188.30',  'port-in': 8000, 'port-out': 9000},
 ]
 
-def get_infonet():
-    hostname = socket.gethostname()
-    ip_address = socket.gethostbyname(hostname)
-    return hostname, ip_address
+# Obtener la dirección IP del equipo
+hostname = socket.gethostname()
+ip_address = socket.gethostbyname(hostname)
 
-hostname , ip_address = get_infonet()
-
-
-if ip_address == '172.27.182.65':
-    server = WebSocketServer(ip_address, 8000, 9000)
-elif ip_address == '172.27.188.147':
-    client = WebSocketClient(ip_address, 8000, 9000)
+# Crear el servidor y el cliente WebSocket
+server = None
+client = None
+for node in nodes:
+    if ip_address == node['ip']:
+        server = WebSocketServer(node['ip'], node['port-in'], node['port-out'])
+    elif node['ip'] == '172.27.188.147':
+        client = WebSocketClient(node['ip'], node['port-in'], node['port-out'])
 
 # Iniciar el servidor y el cliente WebSocket
 async def main():
