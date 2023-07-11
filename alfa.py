@@ -39,13 +39,15 @@ class WebSocketClient:
         self.ip = ip
         self.port_in = port_in
         self.port_out = port_out
+        self.websocket = None
 
     async def handle_server(self, websocket, path):
         # Manejar conexiones WebSocket
+        self.websocket = websocket
         while True:
-            # Recibir la hora actual del servidor
-            now = await websocket.recv()
-            print(f'Hora actual: {now}')
+            # Recibir mensajes del servidor
+            message = await self.websocket.recv()
+            print(f'Mensaje recibido: {message}')
 
     async def start(self):
         # Conectar al servidor WebSocket
@@ -53,6 +55,11 @@ class WebSocketClient:
         async with websockets.connect(uri) as websocket:
             # Manejar conexiones WebSocket
             await self.handle_server(websocket, uri)
+
+            # Esperar a que el usuario ingrese un mensaje
+            while True:
+                message = input('Ingrese un mensaje: ')
+                await self.websocket.send(message)
 
 # Crear los nodos
 nodes = [
