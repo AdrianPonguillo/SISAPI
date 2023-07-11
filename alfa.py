@@ -1,85 +1,81 @@
 import asyncio
-import time
-import socket
+import datetime
 import websockets
 
-class Node:
-    def __init__(self, name, ip, port_in, port_out):
-        self.name = name
+class WebSocketServer:
+    def __init__(self, ip, port_in, port_out):
         self.ip = ip
         self.port_in = port_in
         self.port_out = port_out
-        self.servers = {}
-        self.times = {}
+        self.server = None
 
     async def handle_client(self, websocket, path):
         # Manejar conexiones WebSocket
-        message = await websocket.recv()
-        if message == 'estoy vivo':
-            await websocket.send('estoy vivo')
+        while True:
+            # Enviar la hora actual al cliente
+            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            await websocket.send(now)
 
-    async def connect(self, ip, port):
-        # Conectar al servidor WebSocket en el nodo remoto
-        uri = f'ws://{ip}:{port}'
-        async with websockets.connect(uri) as websocket:
-            # Enviar un mensaje de "estoy vivo" y medir el tiempo de respuesta
-            start_time = time.time()
-            await websocket.send('estoy vivo')
-            response = await websocket.recv()
-            end_time = time.time()
-
-            # Almacenar la duración de la respuesta en el diccionario de tiempos
-            duration = end_time - start_time
-            self.times[ip] = duration
+            # Esperar 5 segundos antes de enviar la siguiente hora
+            await asyncio.sleep(5)
 
     async def start(self):
-        # Crear los servidores WebSocket
-        if self.ip == socket.gethostbyname(socket.gethostname()):
-            for node in nodes:
-                if node.ip != self.ip:
-                    uri = f'ws://{node.ip}:{node.port_in}'
-                    server = await websockets.serve(self.handle_client, self.ip, self.port_out)
-                    self.servers[node.ip] = server
+        # Crear el servidor WebSocket
+        uri = f'ws://{self.ip}:{self.port_in}'
+        self.server = await websockets.serve(self.handle_client, self.ip, self.port_out)
 
-        # Conectar a los otros nodos y medir los tiempos de respuesta
-        tasks = []
-        for node in nodes:
-            if node.ip != self.ip:
-                task = asyncio.create_task(self.connect(node.ip, node.port_out))
-                tasks.append(task)
-        await asyncio.gather(*tasks)
-
-        # Imprimir los tiempos de respuesta
-        print(self.times)
+        # Mantener el servidor WebSocket en ejecución
+        await self.server.wait_closed()
 
     async def stop(self):
-        # Detener los servidores WebSocket
-        for server in self.servers.values():
-            server.close()
-        await asyncio.gather(*self.servers.values())
+        # Detener el servidor WebSocket
+        if self.server:
+            self.server.close()
+            await self.server.wait_closed()
 
+class WebSocketClient:
+    def __init__(self, ip, port_in, port_out):
+        self.ip = ip
+        self.port_in = port_in
+        self.port_out = port_out
+
+    async def handle_server(self, websocket, path):
+        # Manejar conexiones WebSocket
+        while True:
+            # Recibir la hora actual del servidor
+            now = await websocket.recv()
+            print(f'Hora actual: {now}')
+
+    async def start(self):
+        # Conectar al servidor WebSocket
+        uri = f'ws://{self.ip}:{self.port_in}'
+        async with websockets.connect(uri) as websocket:
+            # Manejar conexiones WebSocket
+            await self.handle_server(websocket, uri)
+
+# Crear los nodos
 nodes = [
-    Node('dist4', '172.27.182.65', 8000, 8001),
-    Node('dist5', '172.27.188.147', 8000, 8001),
-    Node('dist6', '172.27.186.190', 8000, 8001),
-    Node('dist7', '172.27.188.30', 8000, 8001)
+    {'name': 'dist4', 'ip':'172.27.182.65',  'port-in': 8000, 'port-out': 9000},
+    {'name': 'dist5', 'ip':'172.27.188.147', 'port-in': 8000, 'port-out': 9000},
+    {'name': 'dist6', 'ip':'172.27.186.190', 'port-in': 8000, 'port-out': 9000},
+    {'name': 'dist7', 'ip':'172.27.188.30',  'port-in': 8000, 'port-out': 9000},
 ]
 
+# Crear el servidor y el cliente WebSocket
+for node in nodes:
+    if node['ip'] == '172.27.182.65':
+        server = WebSocketServer(node['ip'], node['port-in'], node['port-out'])
+    elif node['ip'] == '172.27.188.147':
+        client = WebSocketClient(node['ip'], node['port-in'], node['port-out'])
+
+# Iniciar el servidor y el cliente WebSocket
 async def main():
-    # Iniciar los nodos
     tasks = []
-    for node in nodes:
-        task = asyncio.create_task(node.start())
+    if server:
+        task = asyncio.create_task(server.start())
         tasks.append(task)
-    await asyncio.gather(*tasks)
-
-    # Los nodos están en ejecución
-    # ...
-
-    # Detener los nodos
-    tasks = []
-    for node in nodes:
-        task = asyncio.create_task(node.stop())
+    if client:
+        task = asyncio.create_task(client.start())
         tasks.append(task)
     await asyncio.gather(*tasks)
 
