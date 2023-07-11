@@ -1,5 +1,6 @@
 import asyncio
 import time
+import socket
 import websockets
 
 class Node:
@@ -33,11 +34,12 @@ class Node:
 
     async def start(self):
         # Crear los servidores WebSocket
-        for node in nodes:
-            if node.ip != self.ip:
-                uri = f'ws://{node.ip}:{node.port_in}'
-                server = await websockets.serve(self.handle_client, self.ip, self.port_out)
-                self.servers[node.ip] = server
+        if self.ip == socket.gethostbyname(socket.gethostname()):
+            for node in nodes:
+                if node.ip != self.ip:
+                    uri = f'ws://{node.ip}:{node.port_in}'
+                    server = await websockets.serve(self.handle_client, self.ip, self.port_out)
+                    self.servers[node.ip] = server
 
         # Conectar a los otros nodos y medir los tiempos de respuesta
         tasks = []
@@ -57,10 +59,10 @@ class Node:
         await asyncio.gather(*self.servers.values())
 
 nodes = [
-    Node('dist4', '172.27.182.65', 8000, 9000),
-    Node('dist5', '172.27.188.147', 8000, 9000),
-    Node('dist6', '172.27.186.190', 8000, 9000),
-    Node('dist7', '172.27.188.30', 8000, 9000)
+    Node('dist4', '172.27.182.65', 8000, 8001),
+    Node('dist5', '172.27.188.147', 8000, 8001),
+    Node('dist6', '172.27.186.190', 8000, 8001),
+    Node('dist7', '172.27.188.30', 8000, 8001)
 ]
 
 async def main():
