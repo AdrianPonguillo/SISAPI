@@ -1,62 +1,16 @@
-import socket
-import random
 import threading
 import asyncio
 import json
 import websockets
 import random
 import time
-
-class Host:
-
-    nodos = [
-        {'name': 'dist4', 'ip':'172.27.176.5', 'porta': 8000, 'portb': 9000},
-        {'name': 'dist5', 'ip':'172.27.176.6', 'porta': 8000, 'portb': 9000},
-        {'name': 'dist6', 'ip':'172.27.176.7', 'porta': 8000, 'portb': 9000},
-        {'name': 'dist7', 'ip':'172.27.176.8', 'porta': 8000, 'portb': 9000},
-        {'name': 'dist8', 'ip':'172.28.252.102', 'porta': 8000, 'portb': 9000},
-    ]
-
-    def get_local_ip(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        local_ip = s.getsockname()[0]
-        s.close()
-        return local_ip
-        
-    def get_hostname(self, ip):
-        for node in self.nodos:
-            if node['ip'] == ip:
-                print(node)
-                return node
-        return None
-    
-    def get_other_ips(self):
-        other = []
-        for i in self.nodos:
-            if i['ip'] != self.get_local_ip():
-                other.append(i)
-        #print(other)
-        return other
-    
-
-class Node:
-    def __init__(self, ip ):
-            self.ip = ip
-            self.localhost = Host().get_hostname(self.ip)
-            self.status = False
-            self.name = self.localhost['name']    
-            self.port = self.localhost['porta']        
-
-    def set_value(self, value):
-        self.value = value
-            
+from node import Node, Host
 
 class NodeCommunication:
     def __init__(self, nodes):
         self.nodes = nodes
         self.statuses = {}
-    '''
+
     async def send_message(self, node, message):
         try:
             async with websockets.connect(f"ws://{node.ip}:8000", timeout=5) as websocket:
@@ -70,25 +24,7 @@ class NodeCommunication:
             print("Esperando nodos para conectarse...")
             await asyncio.sleep(5)
             return None
-    '''
-    async def send_message(self, node, message):
-        try:
-            async with websockets.connect(f"ws://{node.ip}:{node.port}", timeout=5) as websocket:
-                await websocket.send(message)
-                response = await websocket.recv()
-                return response
-        except websockets.exceptions.ConnectionClosedOK:
-            print(f"Error: La conexión con {node.ip} se cerró inesperadamente.")
-            return None
-        except asyncio.TimeoutError:
-            print("Esperando nodos para conectarse...")
-            await asyncio.sleep(5)
-            return None
-        except ConnectionRefusedError:
-            print(f"Error: No se pudo conectar con {node.ip}. Reintentando en 5 segundos...")
-            await asyncio.sleep(5)
-            return None
-    
+
     async def check_node_status(self, node):
         try:
             response = await asyncio.wait_for(self.send_message(node, "ping"), timeout=5)
@@ -137,7 +73,6 @@ if __name__ == "__main__":
     server = Node(hosts.get_local_ip())
     other_nodos = []
     for oi in other_ips:
-        #print(oi['ip'])
         other_nodos.append(Node(oi['ip']))
 
     #nodes = [Node("localhost"), Node("localhost")]
@@ -149,29 +84,3 @@ if __name__ == "__main__":
     while True:
         print(time.strftime("%H:%M:%S", time.localtime()))
         time.sleep(20)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#class Nodes:
-
-
-#l = Host().get_other_ips()
-#r = Host().get_localhost(Host().get_local_ip())
-#print(Host().get_local_ip())
-#print(r)
-
-#nodo = Node('172.27.176.7')
-#print(nodo.name)
