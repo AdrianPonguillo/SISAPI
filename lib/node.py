@@ -14,7 +14,7 @@ class Host:
         {'name': 'dist5', 'ip':'172.27.176.6', 'porta': 8000, 'portb': 9000},
         {'name': 'dist6', 'ip':'172.27.176.7', 'porta': 8000, 'portb': 9000},
         {'name': 'dist7', 'ip':'172.27.176.8', 'porta': 8000, 'portb': 9000},
-        {'name': 'dist8', 'ip':'172.28.252.102', 'porta': 8000, 'portb': 9000},
+        #{'name': 'dist8', 'ip':'172.28.252.102', 'porta': 8000, 'portb': 9000},
     ]
 
     def get_local_ip(self):
@@ -50,27 +50,31 @@ class Node:
 
     def set_value(self, value):
         self.value = value
-            
+
+
+class SharedObject:
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.data = {}
+
+    def update(self, node_name, value):
+        with self.lock:
+            self.data[node_name] = value
+
+    def get_data(self):
+        with self.lock:
+            return self.data.copy()
+
 
 class NodeCommunication:
     def __init__(self, nodes):
         self.nodes = nodes
         self.statuses = {}
-    '''
-    async def send_message(self, node, message):
-        try:
-            async with websockets.connect(f"ws://{node.ip}:8000", timeout=5) as websocket:
-                await websocket.send(message)
-                response = await websocket.recv()
-                return response
-        except websockets.exceptions.ConnectionClosedOK:
-            print(f"Error: La conexión con {node.ip} se cerró inesperadamente.")
-            return None
-        except asyncio.TimeoutError:
-            print("Esperando nodos para conectarse...")
-            await asyncio.sleep(5)
-            return None
-    '''
+        self.shared_object = SharedObject()
+    
+    def get_shared_data(self):
+        return self.shared_object.get_data()
+
     async def send_message(self, node, message):
         try:
             async with websockets.connect(f"ws://{node.ip}:{node.port}", timeout=5) as websocket:
@@ -96,8 +100,20 @@ class NodeCommunication:
                 node.status = True
             else:
                 node.status = False
-        except:
+        except websockets.exceptions.ConnectionClosedError as e:
+            if e.code == 1006:
+                print(f"Error: No se pudo conectar con {node.ip}. Reintentando en 5 segundos...")
+            else:
+                print(f"Error: La conexión con {node.ip} se cerró inesperadamente.")
             node.status = False
+        except asyncio.TimeoutError:
+            print("Esperando nodos para conectarse...")
+            node.status = False
+            await asyncio.sleep(5)
+        except ConnectionRefusedError:
+            print(f"Error: No se pudo conectar con {node.ip}. Reintentando en 5 segundos...")
+            node.status = False
+            await asyncio.sleep(5)
 
     async def check_nodes_statuses(self):
         tasks = []
@@ -110,6 +126,7 @@ class NodeCommunication:
         while True:
             number = random.randint(1000, 2000)
             print(f"{node.name}: Envie {number}")
+            self.shared_object.update(node.name, number)  # Actualizar el objeto compartido
             for other_node in self.nodes:
                 if other_node != node:
                     await self.send_message(other_node, f"{node.name} {number}")
@@ -137,10 +154,8 @@ if __name__ == "__main__":
     server = Node(hosts.get_local_ip())
     other_nodos = []
     for oi in other_ips:
-        #print(oi['ip'])
         other_nodos.append(Node(oi['ip']))
 
-    #nodes = [Node("localhost"), Node("localhost")]
     node_communication = NodeCommunication(other_nodos)
     loop = asyncio.get_event_loop()
     thread = threading.Thread(target=lambda: asyncio.run(node_communication.run(server)))
@@ -149,29 +164,10 @@ if __name__ == "__main__":
     while True:
         print(time.strftime("%H:%M:%S", time.localtime()))
         time.sleep(20)
+        shared_data = node_communication.get_shared_data()
+        print("Datos compartidos:")
+        for node_name, value in shared_data.items():
+            print(f"{node_name}: {value}")
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-#class Nodes:
-
-
-#l = Host().get_other_ips()
-#r = Host().get_localhost(Host().get_local_ip())
-#print(Host().get_local_ip())
-#print(r)
-
-#nodo = Node('172.27.176.7')
-#print(nodo.name)
