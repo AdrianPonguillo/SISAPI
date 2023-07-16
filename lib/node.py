@@ -8,13 +8,12 @@ import random
 import time
 
 class Host:
-
     nodos = [
-        {'name': 'dist4', 'ip':'172.27.176.5', 'porta': 8000, 'portb': 9000},
-        {'name': 'dist5', 'ip':'172.27.176.6', 'porta': 8000, 'portb': 9000},
-        {'name': 'dist6', 'ip':'172.27.176.7', 'porta': 8000, 'portb': 9000},
-        {'name': 'dist7', 'ip':'172.27.176.8', 'porta': 8000, 'portb': 9000},
-        #{'name': 'dist8', 'ip':'172.28.252.102', 'porta': 8000, 'portb': 9000},
+        {'name': 'dist4', 'ip': '172.27.176.5', 'porta': 8000},
+        {'name': 'dist5', 'ip': '172.27.176.6', 'porta': 8001},
+        {'name': 'dist6', 'ip': '172.27.176.7', 'porta': 8002},
+        {'name': 'dist7', 'ip': '172.27.176.8', 'porta': 8003},
+        #{'name': 'dist8', 'ip': '172.28.252.102', 'porta': 8004},
     ]
 
     def get_local_ip(self):
@@ -23,33 +22,32 @@ class Host:
         local_ip = s.getsockname()[0]
         s.close()
         return local_ip
-        
+
     def get_hostname(self, ip):
         for node in self.nodos:
             if node['ip'] == ip:
                 print(node)
                 return node
         return None
-    
+
     def get_other_ips(self):
         other = []
         for i in self.nodos:
             if i['ip'] != self.get_local_ip():
                 other.append(i)
-        #print(other)
+        # print(other)
         return other
-    
+
+#print(Host().get_local_ip())
 
 class Node:
-    def __init__(self, ip ):
-            self.ip = ip
-            self.localhost = Host().get_hostname(self.ip)
-            self.status = False
-            self.name = self.localhost['name']    
-            self.port = self.localhost['porta']        
-
-    def set_value(self, value):
-        self.value = value
+    def __init__(self, ip):
+        self.ip = ip
+        self.localhost = Host().get_hostname(self.ip)
+        self.status = False
+        self.name = self.localhost['name']
+        self.port = self.localhost['porta']
+        self.value = random.randint(1000, 2000)  # Generar valor único al crear el nodo
 
 
 class SharedObject:
@@ -71,7 +69,8 @@ class NodeCommunication:
         self.nodes = nodes
         self.statuses = {}
         self.shared_object = SharedObject()
-    
+        self.leader_node = None
+
     def get_shared_data(self):
         return self.shared_object.get_data()
 
@@ -92,7 +91,7 @@ class NodeCommunication:
             print(f"Error: No se pudo conectar con {node.ip}. Reintentando en 5 segundos...")
             await asyncio.sleep(5)
             return None
-    
+
     async def check_node_status(self, node):
         try:
             response = await asyncio.wait_for(self.send_message(node, "ping"), timeout=5)
@@ -116,36 +115,59 @@ class NodeCommunication:
             await asyncio.sleep(5)
 
     async def check_nodes_statuses(self):
-        tasks = []
-        for node in self.nodes:
-            task = asyncio.ensure_future(self.check_node_status(node))
-            tasks.append(task)
-        await asyncio.gather(*tasks)
+        while True:
+            tasks = []
+            for node in self.nodes:
+                task = asyncio.ensure_future(self.check_node_status(node))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+            self.statuses = {node.ip: node.status for node in self.nodes}
+            if len([status for status in self.statuses.values() if status]) >= 3:
+                break
+            await asyncio.sleep(5)  # tiempo de espera antes de revisar de nuevo
+
 
     async def send_random_number(self, node):
         while True:
-            number = random.randint(1000, 2000)
-            print(f"{node.name}: Envie {number}")
-            self.shared_object.update(node.name, number)  # Actualizar el objeto compartido
             for other_node in self.nodes:
                 if other_node != node:
-                    await self.send_message(other_node, f"{node.name} {number}")
+                    await self.send_message(other_node, f"{node.name} {node.value}")  # Enviar valor propio
             await asyncio.sleep(5)
 
     async def run(self, node):
-        print('Soy {0}'.format(node.name))
+        print(f'Soy {node.name} y mi valor es {node.value}')
         async with websockets.serve(self.handle_message, node.ip, node.port):
-            for node in self.nodes:
-                await asyncio.create_task(self.send_random_number(node))
+            for other_node in self.nodes:
+                if other_node != node:
+                    await asyncio.create_task(self.send_random_number(other_node))
             while True:
                 await self.check_nodes_statuses()
                 self.statuses = {node.ip: node.status for node in self.nodes}
+                if all(self.statuses.values()):  # Verificar si todos los nodos están disponibles
+                    break  # Salir del ciclo si todos los nodos están disponibles
                 await asyncio.sleep(20)
+
+        # Obtener valores enviados por otros nodos
+        shared_data = self.get_shared_data()
+        print("Datos compartidos:")
+        for node_name, value in shared_data.items():
+            print(f"{node_name}: {value}")
+
+        # Encontrar el valor máximo y determinar el líder
+        max_value = max(shared_data.values())
+        self.leader_node = [node for node, value in shared_data.items() if value == max_value][0]
+        print(f"El nodo líder es: {self.leader_node}")
+
+        # Enviar mensaje del líder a todos los nodos
+        for other_node in self.nodes:
+            if other_node != node:
+                await self.send_message(other_node, f"Líder: {self.leader_node}")
 
     async def handle_message(self, websocket, path):
         message = await websocket.recv()
         sender_name, number = message.split()
-        print(f"Recibi de {sender_name} el numero {number}")
+        print(f"Recibí de {sender_name} el número {number}")
+        self.shared_object.update(sender_name, int(number))
 
 
 if __name__ == "__main__":
@@ -164,10 +186,3 @@ if __name__ == "__main__":
     while True:
         print(time.strftime("%H:%M:%S", time.localtime()))
         time.sleep(20)
-        shared_data = node_communication.get_shared_data()
-        print("Datos compartidos:")
-        for node_name, value in shared_data.items():
-            print(f"{node_name}: {value}")
-
-
-
