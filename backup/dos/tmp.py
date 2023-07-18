@@ -1,6 +1,6 @@
 import json
 import requests
-from repository import Repository
+from lib.repository import Repository
 '''
 enviar = {}
 with open('./files/COL0000272.json', 'r', encoding='iso-8859-1') as f:

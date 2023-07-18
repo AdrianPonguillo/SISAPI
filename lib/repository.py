@@ -19,17 +19,21 @@ class Repository:
         self.filename = f"database/data_{self.file_id}.db"
         
     def save_data(self, partitions):
-        if self.user_id in partitions:
-            return 0
         try:
-            file_position = os.path.getsize(self.filename)
-        except FileNotFoundError:
-            file_position = 0
-        with open(self.filename, "ab") as f:
-            pickle.dump(self.data, f)
-            data_position = f.tell()
-        partitions[self.user_id] = {"filename": self.filename, "position": file_position, "size": data_position - file_position}
-        return 1
+            if self.user_id in partitions:
+                return 0
+            try:
+                file_position = os.path.getsize(self.filename)
+            except FileNotFoundError:
+                file_position = 0
+            with open(self.filename, "ab") as f:
+                pickle.dump(self.data, f)
+                data_position = f.tell()
+            partitions[self.user_id] = {"filename": self.filename, "position": file_position, "size": data_position - file_position}
+            return 1
+        except Exception as ex:
+            print('Error al grabar: ' + str(ex))
+            return 0
 
     def save_index(self, partitions):
         with open('database/index.dbx', 'wb') as f:
