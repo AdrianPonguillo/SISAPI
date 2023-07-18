@@ -1,59 +1,85 @@
-import lib.webclient
-import lib.webserver as srv
-import lib.ip_config as ip
-import socket
-import asyncio 
-import datetime
-import websockets
+from lib.zoo import Node
 
-def get_infonet():
-    hostname = socket.gethostname()
-    ip_address = socket.gethostbyname(hostname)
-    return hostname, ip_address
-
-def remove_dict_by_ip(lst, ip):
-    result = []
-    for d in lst:
-        if d['ip'] != ip:
-            result.append(d)
-    return result
-
-lista_server = remove_dict_by_ip(ip.nodos, '172.27.188.147')
-
-async def handler(websocket, path):
-    # Enviar la hora actual a los clientes cada segundo
-    while True:
-        now = datetime.datetime.utcnow().isoformat() + 'Z'
-        await websocket.send(now)
-        await asyncio.sleep(1)
-
-
-async def main():
-    for s in lista_server:
-        print(s)
-        #async def run_server():
-        server = srv.Server(s['ip'], s['port-in'])
-        await server.start()
-        #async with websockets.serve(handler, s['ip'], s['port-in']):
-            # Esperar a que el servidor se cierre
-            #await asyncio.Future()
-        server.stop()
-
-asyncio.run(main())
-
-'''
+def main():
+    node = Node()  # Crear una instancia de Node
+    node.connect()  # Conectar la instancia a ZooKeeper
+    node.run_for_leadership()  # Comenzar a intentar convertirse en líder
 
 if __name__ == "__main__":
-    async def run_server1():
-        server1 = Server("localhost", 8888)
-        await server1.start()
-    
+    main()
 
-asyncio.run(run_server1())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 '''
+def main():
+    def get_local_ip():
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
 
-#print(lista_server)
+    nodes_info = [
+        {'name': 'dist4', 'ip': '172.27.176.5', 'port': 8000},
+        {'name': 'dist5', 'ip': '172.27.176.6', 'port': 8000},
+        {'name': 'dist6', 'ip': '172.27.176.7', 'port': 8000},
+        {'name': 'dist7', 'ip': '172.27.176.8', 'port': 8000},
+        #{'name': 'dist8', 'ip': '172.28.252.102', 'port': 8000},
+    ]
 
-#print(ip.nodos)
+    def get_hostname(ip):
+        for node in nodes_info:
+            if node['ip'] == ip:
+                print(node)
+                return node
+        return None 
+    
+    def get_nodes_valids():
+        nodes = []
+        for nodo in nodes_info:
+            if nodo['ip'] != get_local_ip():
+                nodes.append(nodo)
+        return nodes
+
+    local_ip = get_local_ip()
+    #print(local_ip)
+    nodes_valids = get_nodes_valids()
+    current_node_info = get_hostname(local_ip)
+    node_name = current_node_info['name']
+    node_port = current_node_info['port']
+
+    node = Node(node_name, local_ip, node_port, nodes_valids)
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(node.start())
+    loop.run_forever()
+
+if __name__ == "__main__":
+    os.system('clear')
+    main()
+
+'''
 
 

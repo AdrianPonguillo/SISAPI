@@ -11,7 +11,9 @@ class Repository:
             return {}
 
     def set_data(self, data):
-        self.user_id = data['user_id']
+        for key, value in data.items():
+            self.user_id = value['informacion_personal']['user_id']
+        #self.user_id = data['user_id']
         self.data = data
         self.file_id = int(self.user_id[-1])
         self.filename = f"database/data_{self.file_id}.db"
@@ -66,28 +68,3 @@ class Repository:
 
 
 
-partitions = {}
-
-repos = Repository()
-#repos.regenerate_index(partitions)
-partitions = repos.get_index()
-#print(partitions)
-
-
-for i in range(0,1000):
-    user_id = 'clave' + str(i)
-    data = {'user_id': user_id, 'name': 'Juan perez cando', 'age': 30}
-    
-    repos.set_data(data)
-    r = repos.save_data(partitions)
-    print('Procesado {0} insertado {1}'.format(i,r))
-
-
-Repository().save_index(partitions)    
-#clave9878
-#clave9193
-
-print(repos.read_data('clave838', partitions))
-print(repos.read_data('clave190', partitions))
-print(repos.read_data('clave115', partitions))
-#print(partitions)
