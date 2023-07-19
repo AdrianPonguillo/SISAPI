@@ -45,61 +45,64 @@ class Node:
                 # Verifica que hay al menos 3 nodos conectados antes de intentar adquirir el liderazgo
                 if len(self.zk.get_children("/nodes")) < 3:
                     print("Esperando a que haya al menos 3 nodos conectados...")
-                    time.sleep(5)
-                    continue
-                
+                    time.sleep(10)
+                    continue                
                 self.is_leader = self.leader_lock.acquire(blocking=False)
                 if self.is_leader:
                     print('Soy el lider....')
-                    time.sleep(10)
-                    self.handle_data()
-                    time.sleep(5)
+                    data = self.get_data()                    
+                    if data:
+                        self.latest_data = data
+                        self.handle_data()
+                        #time.sleep(3)
+                    else:
+                        break
+                        # Aquí debes liberar el liderazgo para que otro nodo pueda tomar el control y distribuir nuevos datos.
+                    self.leader_lock.release()
+                    self.is_leader = False
+                    #time.sleep(3)
                 else:
                     self.listen_for_data()
-                    time.sleep(5)
+                    #time.sleep(3)
             except KazooException:
                 self.is_leader = False
-                time.sleep(5)  # Esperar un poco antes de intentar de nuevo.
+                #time.sleep(3)  # Esperar un poco antes de intentar de nuevo.
 
     def handle_data(self):
-        data = self.get_data()
-        if data:
-            self.repository.set_data(data)
-            print(self.partitions)
-            re = self.repository.save_data(self.partitions)
-            self.repository.save_index(self.partitions)
-            if  re == 0:
-                print("Hubo un problema al guardar los datos en el nodo líder")
-            elif re == 1:
-                self.distribute_data(data)
-                time.sleep(5)  # Esperar 5 segundos antes del siguiente guardado
-
+        self.repository.set_data(self.latest_data)
+        re = self.repository.save_data(self.partitions)
+        self.repository.save_index(self.partitions)
+        if  re == 0:
+            print("Hubo un problema al guardar los datos en el nodo líder")
+        elif re == 1:
+            self.distribute_data(self.latest_data)
+            #time.sleep(3)  # Esperar 5 segundos antes del siguiente guardado
 
     def get_data(self):
         try:
             response = requests.get(self.endpoint)
             data = response.json()
-            #print(data)
-            print('\n\n')
             return data
         except Exception as ex:
             print('Se ha producido un error:' + str(ex))
             return False
-        
+
     def distribute_data(self, data):
-        print('valor equivocado ... ')
         data_node_path = "/data"
         data_str = json.dumps(data)
         if self.zk.exists(data_node_path):
-            self.zk.set(data_node_path, data_str.encode())
+            current_data, stat = self.zk.get(data_node_path)
+            if current_data.decode() != data_str:  # Sólo cambiar los datos si son diferentes
+                self.zk.set(data_node_path, data_str.encode())
         else:
             self.zk.create(data_node_path, data_str.encode())
-    
+
     def listen_for_data(self):
         data_node_path = "/data"
         try:
             data, stat = self.zk.get(data_node_path)
-            self.handle_received_data(data)
+            if data != self.latest_data:
+                self.handle_received_data(data)
         except NoNodeError:
             pass  # El nodo de datos aún no existe.
 
@@ -110,7 +113,6 @@ class Node:
     def handle_received_data(self, data):
         try:
             data_json = json.loads(data.decode())
-            #print(data_json)
             self.repository.set_data(data_json)
             re = self.repository.save_data(self.partitions)
             self.repository.save_index(self.partitions)
@@ -118,9 +120,10 @@ class Node:
                 print("Hubo un problema al guardar los datos en el nodo {self.zk.client_id}")
         except Exception as ex:
             print('Error: '+ str(ex))
-            
+
     def close(self):
         if self.zk.connected:
             self.zk.stop()
             self.zk.close()
+
 
