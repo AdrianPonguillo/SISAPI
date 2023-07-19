@@ -1,14 +1,19 @@
-#from collections.abc import Callable, Iterable, Mapping
 from  threading import Thread
 import threading
 import json
 import os
-#import pickle
-#from typing import Any
 from lib.conexion import Conexion
 import signal
 
 class Repositorio(Thread):
+    """
+    Clase que almacena los datos obtenidos de la cola de mensajes en un repositorio del servidor
+      
+    Métodos:
+        __init__(): Constructor de la clase
+        run(user_id, contenido): Guarda los datos obtenidos en ficheros con extensión json
+        launch_tasks(n): Genera los n hilos de la clase
+    """
     def __init__(self, user_id, contenido):
         Thread.__init__(self)
         self.name_file = user_id
@@ -33,6 +38,20 @@ class Repositorio(Thread):
 
 
 class ConsumerThread(Thread):
+    """
+    Clase que se conecta a RabbitMQ y envia los datos a la clase Repositorio para ser almacenados
+    
+    Atributos:
+        file_lock: Bloqueo de hilos
+
+    Métodos:
+        __init__(): Constructor de la clase
+        close_connection(): Controla el cierre de la conexión con RabbitMQ
+        launch_tasks(n): Genera los n hilos de la clase
+        callback(ch, method, properties, body): Controla el flujo de mensajes en la cola
+        run(): Crea el hilo de ejecución
+        signal_handler: Gestiona la interacción con el usuario por teclado
+    """
     file_lock = threading.Lock()
 
     def __init__(self):
@@ -59,8 +78,6 @@ class ConsumerThread(Thread):
     def run(self):
         self.conn.consuming(self.callback)
         self.conn.close()
-
-
 
 def signal_handler(sig, frame):
     print('Presionaste Ctrl+C!')

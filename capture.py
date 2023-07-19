@@ -1,13 +1,21 @@
 from lib.formulario import Formulario
 from  lib.conexion import Conexion
-#from lib.hilo import Hilo
-import hashlib as h
 from  threading import Thread
 import threading
-import json
-
 
 class Capture(Thread):
+    """
+    Clase que genera el formulario y lo envia a la cola rabbitMQ.
+    
+    Atributos:
+        max_threads: configura cuantos hilos pueden trabajar en paralelo
+        semaphore: Maneja un control de numeros de hilos trabajando en paralelo
+        
+    Métodos:
+        __init__(): Constructor de la clase
+        run(): Genera la logica de creacion de formulario y envio del mismo a la cola
+        launch_tasks(n): Genera los n hilos de la clase
+    """
     max_threads = 20
     semaphore = threading.Semaphore(max_threads)
     
@@ -26,16 +34,12 @@ class Capture(Thread):
         print('Terminado proceso {} '.format(self.task_id))
         self.conn.close()
 
-
-
-
 def launch_tasks(n):
     threads = []
     for i in range(n):
         thread = Capture(i)
         threads.append(thread)
         thread.start()
-
 
     # Esperar a que todos los hilos terminen
     for thread in threads:

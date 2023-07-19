@@ -3,6 +3,15 @@ import uuid
 import json
 
 class Formulario():
+    """
+    Generacion de datos almacenados en un diccionario para ser llevados a RabbitMQ y posteriormente a un archivo.
+
+    Métodos:
+        __init__(): Inicializador de objetos
+        crear_formulario(): Genera el diccionario llamando a funciones que devuelven datos aleatorios de una base de datos
+        formulario_to_json(): Convierte el diccionario a json
+    """
+
     def __init__(self):
         self.identificador = str(uuid.uuid4())
         self.data = Data()

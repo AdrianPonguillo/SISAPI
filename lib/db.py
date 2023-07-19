@@ -3,6 +3,12 @@ import string
 
 
 class Data:
+    """
+    Almacenamiento de valores posibles para la generacion del formulario
+
+    Métodos:
+        get_XXX (*parametros): Lee la lista asociada y devuelve el numero de elementos establecidos coo parametros
+    """
     nom_masculinos = [
         "Liam", "Noah", "Oliver", "Elijah", "Lucas", "Mason", "Ethan", "Sebastian", "Mateo", "Jack",
         "Alexander", "Jacob", "Michael", "Daniel", "Henry", "Matthew", "Joseph", "Samuel", "David", "John",
@@ -444,18 +450,12 @@ class Data:
 
     def get_postura_politica(self):
         return random.choice(self.posturas_politicas)
-    '''
-    def get_identificador_pasaporte(self):
-        letras = random.choices(string.ascii_uppercase, k=3)
-        numeros = random.choices(string.digits, k=7)
-        return ''.join(letras + numeros)
-    '''
+
     def get_identificador_pasaporte(self):
         codigos_paises = ['ECU', 'USA', 'MEX', 'PER', 'COL']
         codigo_pais = random.choice(codigos_paises)
         numeros = random.choices(string.digits, k=7)
         return ''.join([codigo_pais] + numeros)
-
 
     def get_edad(self):
         return random.randint(18, 105)

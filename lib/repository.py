@@ -2,12 +2,21 @@ import json
 import os
 import pickle
 
-import os
 
-ruta_actual = os.getcwd()
-print(ruta_actual)
+class Repository:
+    """
+    Clase de almacenamiento de datos o base de datos del producto.
+    Administra los archivos .db y dbx (indice de la base)
 
-class Repository:    
+    Métodos:
+        get_index(): Si existe abre el archivo dbx y lo envia a memoria para el acceso rapido a la data
+        set_data(data): Envia a la instancia la data a guardar
+        save_data(partitions): Almacena la información en los archivos db y actualiza el indice en memoria
+        save_index(partitions): Guarda el indice de memoria a disco (idx)
+        read_data(user_id, partitions): En consultas, este lee el dato que se necesita, por clave (user_id)
+        regenerate_index(partitions): En caso de daño del indice, esta funcion lee todos los db y crea un nuevo indice.
+    """
+
     def get_index(self):
         if os.path.exists('../database/index.dbx'):
             with open("../database/index.dbx", "rb") as f:

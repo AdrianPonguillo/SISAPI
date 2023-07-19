@@ -11,12 +11,38 @@ from  lib.repository import Repository
 logging.basicConfig()
 
 class Node:
+    """
+    Clase que crea los nodos del sistema, se conecta entre ellos y envia y controla la transacción distribuida en la base de datos
+
+    Atributos:
+        self.zk: Nodo
+        self.leader_lock: Define quien es el lider bloqueando a todos los nodos
+        self.is_leader: Para preguntar quien es el lider
+        self.endpoint: Url api 'http://20.55.70.215:8080/get_file'
+        self.repository: Base de datos del sistema
+        self.partitions: Indice en memoria para la base de datos
+        self.latest_data: Atributo para guardar los últimos datos distribuidos por el nodo líder
+
+    Métodos:
+        __init__(hosts, endpoint): Inicializacion de parametros del sistema
+        connect(): Conexión y creación de nodos, se realizan 50 intentos sino el sistema no entra
+        run_for_leadership(): Corre la lógica del producto, verifica quien es el lider y le entrega la tarea de conectarse 
+                            al endpoint y enviar la data a los nodos seguidores. Trabaja cuando hay al menos 3 nodos conectados
+        handle_data(): Maneja la transacción en la base de datos, guarda el dato y guarda el indice. Si esta guardado envia a los demas nodos
+        get_data(): Conexión con el endpoint para traer los datos del servidor de archivos de formularios
+        distribute_data(data): Envia el dato a todos los nodos del sistema
+        listen_for_data(): En los nodos seguidores se encarga de atender la data recibida
+        data_watch(data, stat, event): Watch del modulo, maneja el criterio de seguir o detenerse en caso de que algo cambie
+        handle_received_data(data): Se encarga de almacenar en los nodos seguidores los datos
+        close(): Controla el cierre de la conexión de los datos 
+    """
+
     def __init__(self, hosts='172.20.198.207:2181', endpoint='http://20.55.70.215:8080/get_file'):
         self.zk = KazooClient(hosts=hosts)
         self.leader_lock = self.zk.Lock("/leader")
         self.is_leader = False
         self.endpoint = endpoint
-        self.repository = Repository()
+        self.repository = Repository() #Base de datos del sistema
         self.partitions = {}
         self.partitions = self.repository.get_index()
         self.latest_data = None  # Atributo para guardar los últimos datos distribuidos por el nodo líder

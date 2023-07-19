@@ -4,6 +4,9 @@ import sys
 import signal
 
 def main():
+    """
+    Lanzador de aplicación en nodos
+    """
     node = Node()
 
     # Maneja la señal de interrupción (SIGINT) y cierra la conexión con Zookeeper
