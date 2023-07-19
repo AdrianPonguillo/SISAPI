@@ -2,10 +2,15 @@ import json
 import os
 import pickle
 
+import os
+
+ruta_actual = os.getcwd()
+print(ruta_actual)
+
 class Repository:    
     def get_index(self):
-        if os.path.exists('database/index.dbx'):
-            with open("database/index.dbx", "rb") as f:
+        if os.path.exists('../database/index.dbx'):
+            with open("../database/index.dbx", "rb") as f:
                 return pickle.load(f)
         else:
             return {}
@@ -16,16 +21,19 @@ class Repository:
         #self.user_id = data['user_id']
         self.data = data
         self.file_id = int(self.user_id[-1])
-        self.filename = f"database/data_{self.file_id}.db"
+        self.filename = f"../database/data_{self.file_id}.db"
         
     def save_data(self, partitions):
         try:
             if self.user_id in partitions:
-                return 0
+                print(f'User con problemas {self.user_id}')
+                print(partitions)
+                return 1
             try:
                 file_position = os.path.getsize(self.filename)
             except FileNotFoundError:
                 file_position = 0
+                #print('Problema con el FileNotFoundError')
             with open(self.filename, "ab") as f:
                 pickle.dump(self.data, f)
                 data_position = f.tell()
@@ -36,7 +44,7 @@ class Repository:
             return 0
 
     def save_index(self, partitions):
-        with open('database/index.dbx', 'wb') as f:
+        with open('../database/index.dbx', 'wb') as f:
             pickle.dump(partitions, f)
 
     def read_data(self, user_id, partitions):
@@ -53,11 +61,11 @@ class Repository:
     
     def regenerate_index(self, partitions):
         partitions.clear()
-        for filename in os.listdir('database'):
+        for filename in os.listdir('../database'):
             print(filename)
             if filename.startswith("data_") and filename.endswith(".db"):
                 partition_id = int(filename.split("_")[1].split(".")[0])
-                with open('database/'+filename, "rb") as f:
+                with open('../database/'+filename, "rb") as f:
                     while True:
                         try:
                             data = pickle.load(f)
@@ -66,7 +74,7 @@ class Repository:
                             partitions[user_id] = {"filename": filename, "position": file_position, "size": len(pickle.dumps(data))}
                         except EOFError:
                             break
-        with open('database/index.dbx', 'wb') as f:
+        with open('../database/index.dbx', 'wb') as f:
             pickle.dump(partitions, f)
 
 

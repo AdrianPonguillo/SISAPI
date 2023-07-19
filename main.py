@@ -1,11 +1,24 @@
 from lib.zoo import Node
+import os 
+import sys
+import signal
 
 def main():
-    node = Node()  # Crear una instancia de Node
-    node.connect()  # Conectar la instancia a ZooKeeper
+    node = Node()
+
+    # Maneja la señal de interrupción (SIGINT) y cierra la conexión con Zookeeper
+    def signal_handler(sig, frame):
+        node.close()
+        print('Proceso interrumpido, conexión con Zookeeper cerrada.')
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    node.connect()
     node.run_for_leadership()  # Comenzar a intentar convertirse en líder
 
 if __name__ == "__main__":
+    os.system('clear')
     main()
 
 
